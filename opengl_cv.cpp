@@ -13,17 +13,24 @@
 /** Constants */
 const float camRatio = 0.5;
 const float sceneRatio = 1.5;
+const bool bDisplayDetection = true;
+
+const int minFaceSize = 100; // in pixel. The smaller it is, the further away you can go
+const float cvCamViewAngleXDeg = 48.55;
+const float cvCamViewAngleYDeg = 40.37;
+const float eyesGap = 6.5; //cm
+
 
 /** Global variables */
 //-- Note, either copy these two files from opencv/data/haarscascades to your current folder, or change these locations
 cv::String face_cascade_name = "/home/alexis/Support/opencv-2.4.10/data/haarcascades/haarcascade_frontalface_alt.xml";
-cv::String eyes_cascade_name = "/home/alexis/Support/opencv-2.4.10/data/haarcascades/haarcascade_eye_tree_eyeglasses.xml";
 cv::CascadeClassifier face_cascade;
-cv::CascadeClassifier eyes_cascade;
-std::string window_face_detection = "Capture - Face detection";
-std::string window_eyes_detection = "Capture - Eyes detection";
 cv::VideoCapture *capture = NULL;
 cv::Mat frame;
+
+float glCamX;
+float glCamY;
+float glCamZ;
 
 /** Functions */
 void redisplay();
@@ -100,10 +107,7 @@ void redisplay()
     cv::flip(frame, tempimage, 0);
     //-- detect eyes
     tempimage = detectEyes(tempimage);
-    //-- display camera frame
-    cv::flip(tempimage, tempimage, 0);
-    cv::resize(tempimage, tempimage, cv::Size(camRatio*tempimage.size().width, camRatio*tempimage.size().height), 0, 0, cv::INTER_CUBIC);
-    glDrawPixels( tempimage.size().width, tempimage.size().height, GL_BGR, GL_UNSIGNED_BYTE, tempimage.ptr() );
+
 
     /** OPENGL */
     // CAMERA PARAMETERS
@@ -120,7 +124,14 @@ void redisplay()
     // 3D SCENE
     glPushMatrix();
     drawAxes(1.0);
+    glutSolidTeapot(1.0);
+    glTranslatef(0.0f, 0.0f, 2.0f);
     glPopMatrix();
+
+    //-- display camera frame
+    cv::flip(tempimage, tempimage, 0);
+    cv::resize(tempimage, tempimage, cv::Size(camRatio*tempimage.size().width, camRatio*tempimage.size().height), 0, 0, cv::INTER_CUBIC);
+    glDrawPixels( tempimage.size().width, tempimage.size().height, GL_BGR, GL_UNSIGNED_BYTE, tempimage.ptr() );
 
     // RENDER
     //-- display on screen
@@ -139,39 +150,66 @@ cv::Mat detectEyes(cv::Mat image) {
 
     // FACE
     //-- Find bigger face (opencv documentation)
-    face_cascade.detectMultiScale( image_gray, faces, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE|CV_HAAR_FIND_BIGGEST_OBJECT, cv::Size(150, 150) );
+    face_cascade.detectMultiScale( image_gray, faces, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE|CV_HAAR_FIND_BIGGEST_OBJECT, cv::Size(minFaceSize, minFaceSize) );
 
     for( size_t i = 0; i < faces.size(); i++ )
     {
-        //-- face rectangle
-        cv::rectangle(image, faces[i], 1234);
-
-        //-- face lines
-        cv::Point leftPt( faces[i].x, faces[i].y + faces[i].height*0.37 );
-        cv::Point rightPt( faces[i].x + faces[i].width, faces[i].y + faces[i].height*0.37 );
-        cv::Point topPt( faces[i].x + faces[i].width*0.5, faces[i].y);
-        cv::Point bottomPt( faces[i].x + faces[i].width*0.5, faces[i].y + faces[i].height);
-        cv::line(image, leftPt, rightPt, cv::Scalar( 0, 0, 0 ), 1, 1, 0);
-        cv::line(image, topPt, bottomPt, cv::Scalar( 0, 0, 0 ), 1, 1, 0);
-
-        //-- eyes circles
+        // EYES
         cv::Point leftEyePt( faces[i].x + faces[i].width*0.30, faces[i].y + faces[i].height*0.37 );
         cv::Point rightEyePt( faces[i].x + faces[i].width*0.70, faces[i].y + faces[i].height*0.37 );
-        int imgEyesGap = rightEyePt.x-leftEyePt.x; //needed later
-        cv::circle(image, rightEyePt, 0.06*faces[i].width, cv::Scalar( 255, 255, 255 ), 1, 8, 0);
-        cv::circle(image, leftEyePt, 0.06*faces[i].width, cv::Scalar( 255, 255, 255 ), 1, 8, 0);
+        cv::Point eyeCenterPt( faces[i].x + faces[i].width*0.5, leftEyePt.y );
 
-        //-- opengl camera
-        cv::Point eyeCenterPt( faces[i].x + faces[i].width*0.5, leftEyePt.y ); //needed later
-        cv::line(image, leftEyePt, rightEyePt, cv::Scalar( 0, 0, 255 ), 1, 1, 0);
-        cv::circle(image, eyeCenterPt, 2, cv::Scalar( 0, 0, 255 ), 3, 1, 0);
-
+        // COORDINATES
+        //-- z
+        int imgEyesGap = rightEyePt.x-leftEyePt.x;
+        glCamZ = (550.0*eyesGap)/imgEyesGap; // doesn't look right
+        //-- x
+        float ratioX = (float)eyeCenterPt.x/image.size().width;
+        if(ratioX <= 0.5){
+            float phi1 = cvCamViewAngleXDeg * ratioX;
+            float phi2 = (cvCamViewAngleXDeg/2.0)-phi1;
+            glCamX = -glCamZ*tan(phi2*M_PI/180.0);
+        }else if(ratioX > 0.5){
+            float phi1 = cvCamViewAngleXDeg * ratioX;
+            float phi2 = phi1-(cvCamViewAngleXDeg/2.0);
+            glCamX = glCamZ*tan(phi2*M_PI/180.0);
+        }
+        //-- y
+        float ratioY = (float)eyeCenterPt.y/image.size().height;
+        if(ratioY <= 0.5){
+            float phi1 = cvCamViewAngleYDeg * ratioY;
+            float phi2 = (cvCamViewAngleYDeg/2.0)-phi1;
+            glCamY = glCamZ*tan(phi2*M_PI/180.0);
+        }else if(ratioY > 0.5){
+            float phi1 = cvCamViewAngleYDeg * ratioY;
+            float phi2 = phi1-(cvCamViewAngleYDeg/2.0);
+            glCamY = -glCamZ*tan(phi2*M_PI/180.0);
+        }
         //-- cout
-        std::cout<<"(x,y,z) = ("
-                <<eyeCenterPt.x<<","
-                <<eyeCenterPt.y<<","
-                <<imgEyesGap<<")"
-                <<std::endl;
+        std::cout<<"(x,y,z) = ("<<glCamX<<","<<glCamY<<","<<glCamZ<<")"<<std::endl;
+
+        //DISPLAY
+        if(bDisplayDetection)
+        {
+            //-- face rectangle
+            cv::rectangle(image, faces[i], 1234);
+
+            //-- face lines
+            cv::Point leftPt( faces[i].x, faces[i].y + faces[i].height*0.37 );
+            cv::Point rightPt( faces[i].x + faces[i].width, faces[i].y + faces[i].height*0.37 );
+            cv::Point topPt( faces[i].x + faces[i].width*0.5, faces[i].y);
+            cv::Point bottomPt( faces[i].x + faces[i].width*0.5, faces[i].y + faces[i].height);
+            cv::line(image, leftPt, rightPt, cv::Scalar( 0, 0, 0 ), 1, 1, 0);
+            cv::line(image, topPt, bottomPt, cv::Scalar( 0, 0, 0 ), 1, 1, 0);
+
+            //-- eyes circles
+            cv::circle(image, rightEyePt, 0.06*faces[i].width, cv::Scalar( 255, 255, 255 ), 1, 8, 0);
+            cv::circle(image, leftEyePt, 0.06*faces[i].width, cv::Scalar( 255, 255, 255 ), 1, 8, 0);
+
+            //-- eyes line & center
+            cv::line(image, leftEyePt, rightEyePt, cv::Scalar( 0, 0, 255 ), 1, 1, 0);
+            cv::circle(image, eyeCenterPt, 2, cv::Scalar( 0, 0, 255 ), 3, 1, 0);
+        }
     }
 
     return image;
