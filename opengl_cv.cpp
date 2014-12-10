@@ -11,10 +11,10 @@
 #include <math.h>
 
 /** Constants */
+const bool bFullScreen = true;
+const bool bDisplayDetection = true;
 const float camRatio = 0.5;
 const float windowRatio = 1.0;
-const bool bDisplayDetection = true;
-const bool bFullScreen = true;
 
 const int minFaceSize = 80; // in pixel. The smaller it is, the further away you can go
 const float cvCamViewAngleXDeg = 48.55;
@@ -47,6 +47,7 @@ cv::Mat detectEyes(cv::Mat image);
 
 void setGlCamera();
 void draw3dScene();
+void drawPoint(float x, float y, float z);
 void drawCube();
 void drawAxes(float length);
 
@@ -246,6 +247,19 @@ void draw3dScene()
     glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor1);
     glLightfv(GL_LIGHT1, GL_POSITION, lightPos1);
 
+    // SCREEN CORNERS
+    glEnable( GL_POINT_SMOOTH );
+    glEnable( GL_BLEND );
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+
+    glTranslatef(0.0f, 0.0f, 0.0f);
+    glColor3f(1.0f, 0.0f, 0.0f);
+    drawPoint(3.2, 2.0, 0);
+    drawPoint(3.2, -2.0, 0);
+    drawPoint(-3.2, 2.0, 0);
+    drawPoint(-3.2, -2.0, 0);
+
+
     // GEOMETRY
     //-- Pose and Color
     glTranslatef(0.0f, 0.0f, 0.0f);
@@ -264,54 +278,70 @@ void draw3dScene()
     glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
     glColor3f(0.0f, 1.0f, 1.0f);
     drawCube();
+
 }
 
+void drawPoint(float x, float y, float z)
+{
+    float dx = (glCamX/10.0)- x;
+    float dy = (glCamY/10.0)- y;
+    float dz = (glCamZ/10.0)- z;
+
+    float norm = sqrt(dx*dx + dy*dy + dz*dz);
+    float size = 100.0/norm;
+    glPointSize( size );
+
+    //glPointSize(15.0);
+    glBegin( GL_POINTS );
+        glVertex3f( x, y, z );
+    glEnd();
+}
 void drawCube()
 {
     glBegin(GL_QUADS);
-    //Front
-    glNormal3f(0.0f, 0.0f, 1.0f);
-    //glNormal3f(-1.0f, 0.0f, 1.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    //glNormal3f(1.0f, 0.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
-    //glNormal3f(1.0f, 0.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-    //glNormal3f(-1.0f, 0.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
+        //Front
+        glNormal3f(0.0f, 0.0f, 1.0f);
+        //glNormal3f(-1.0f, 0.0f, 1.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        //glNormal3f(1.0f, 0.0f, 1.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
+        //glNormal3f(1.0f, 0.0f, 1.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        //glNormal3f(-1.0f, 0.0f, 1.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
 
-    //Right
-    glNormal3f(1.0f, 0.0f, 0.0f);
-    //glNormal3f(1.0f, 0.0f, -1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
-    //glNormal3f(1.0f, 0.0f, -1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    //glNormal3f(1.0f, 0.0f, 1.0f);
-    glVertex3f(1.0f, 1.0f, 1.0f);
-    //glNormal3f(1.0f, 0.0f, 1.0f);
-    glVertex3f(1.0f, -1.0f, 1.0f);
+        //Right
+        glNormal3f(1.0f, 0.0f, 0.0f);
+        //glNormal3f(1.0f, 0.0f, -1.0f);
+        glVertex3f(1.0f, -1.0f, -1.0f);
+        //glNormal3f(1.0f, 0.0f, -1.0f);
+        glVertex3f(1.0f, 1.0f, -1.0f);
+        //glNormal3f(1.0f, 0.0f, 1.0f);
+        glVertex3f(1.0f, 1.0f, 1.0f);
+        //glNormal3f(1.0f, 0.0f, 1.0f);
+        glVertex3f(1.0f, -1.0f, 1.0f);
 
-    //Back
-    glNormal3f(0.0f, 0.0f, -1.0f);
-    //glNormal3f(-1.0f, 0.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    //glNormal3f(-1.0f, 0.0f, -1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
-    //glNormal3f(1.0f, 0.0f, -1.0f);
-    glVertex3f(1.0f, 1.0f, -1.0f);
-    //glNormal3f(1.0f, 0.0f, -1.0f);
-    glVertex3f(1.0f, -1.0f, -1.0f);
+        //Back
+        glNormal3f(0.0f, 0.0f, -1.0f);
+        //glNormal3f(-1.0f, 0.0f, -1.0f);
+        glVertex3f(-1.0f, -1.0f, -1.0f);
+        //glNormal3f(-1.0f, 0.0f, -1.0f);
+        glVertex3f(-1.0f, 1.0f, -1.0f);
+        //glNormal3f(1.0f, 0.0f, -1.0f);
+        glVertex3f(1.0f, 1.0f, -1.0f);
+        //glNormal3f(1.0f, 0.0f, -1.0f);
+        glVertex3f(1.0f, -1.0f, -1.0f);
 
-    //Left
-    glNormal3f(-1.0f, 0.0f, 0.0f);
-    //glNormal3f(-1.0f, 0.0f, -1.0f);
-    glVertex3f(-1.0f, -1.0f, -1.0f);
-    //glNormal3f(-1.0f, 0.0f, 1.0f);
-    glVertex3f(-1.0f, -1.0f, 1.0f);
-    //glNormal3f(-1.0f, 0.0f, 1.0f);
-    glVertex3f(-1.0f, 1.0f, 1.0f);
-    //glNormal3f(-1.0f, 0.0f, -1.0f);
-    glVertex3f(-1.0f, 1.0f, -1.0f);
+        //Left
+        glNormal3f(-1.0f, 0.0f, 0.0f);
+        //glNormal3f(-1.0f, 0.0f, -1.0f);
+        glVertex3f(-1.0f, -1.0f, -1.0f);
+        //glNormal3f(-1.0f, 0.0f, 1.0f);
+        glVertex3f(-1.0f, -1.0f, 1.0f);
+        //glNormal3f(-1.0f, 0.0f, 1.0f);
+        glVertex3f(-1.0f, 1.0f, 1.0f);
+        //glNormal3f(-1.0f, 0.0f, -1.0f);
+        glVertex3f(-1.0f, 1.0f, -1.0f);
 
     glEnd();
 }
