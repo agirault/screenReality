@@ -30,9 +30,8 @@ cv::Mat frame;
 bool bFullScreen = false;
 bool bDisplayCam = true;
 bool bDisplayDetection = true;
-bool bDisplayText = false;
 bool bPolygonMode = false;
-float camRatio = 0.5;
+float camRatio = 0.3;
 
 //-- dimensions
 int windowWidth;
@@ -53,7 +52,7 @@ void setGlCamera();
 void draw3dScene();
 
 void displayCam(cv::Mat camImage);
-void displayCoord();
+void displayCoord(cv::Mat camImage);
 
 void drawScreen();
 void drawCube(float x, float y, float z, float l, float angle, float ax, float ay, float az );
@@ -98,16 +97,14 @@ int main( int argc, char **argv )
         glutInitWindowPosition( 200, 80 );
         glutInitWindowSize( windowWidth, windowHeight );
     }
-    glutCreateWindow( "Test OpenGL" );
+    glutCreateWindow( "ScreenReality - Vision 3D" );
 
     // RENDERING INIT
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_COLOR_MATERIAL);
-    glEnable(GL_LIGHTING); //Enable lighting
     glEnable(GL_LIGHT0); //Enable light #0
     glEnable(GL_LIGHT1); //Enable light #1
     glEnable(GL_NORMALIZE); //Automatically normalize normals
-    glShadeModel(GL_SMOOTH); //Enable smooth shading
 
     // SCREEN DIMENSIONS
     if(bFullScreen)
@@ -152,8 +149,6 @@ void redisplay()
     draw3dScene();
     //-- cam
     if(bDisplayCam) displayCam(tempimage);
-    //-- text
-    if(bDisplayText) displayCoord();
 
     // RENDER
     //-- display on screen
@@ -226,7 +221,6 @@ void setGlCamera()
     //-- set projection matrix using intrinsic camera params
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    //-- gluPerspective is arbitrarily set, you will have to determine these values based
     gluPerspective(60, (float)windowWidth/(float)windowHeight, 1, 250);
     //-- you will have to set modelview matrix using extrinsic camera params
     glMatrixMode(GL_MODELVIEW);
@@ -236,7 +230,6 @@ void setGlCamera()
 
 void draw3dScene()
 {
-
     // DISPLAY MODE
     if(bPolygonMode){
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -246,6 +239,7 @@ void draw3dScene()
     }
 
     // LIGHTING
+    glEnable(GL_LIGHTING); //Enable lighting
     //-- Add ambient light
     GLfloat ambientColor[] = {0.2f, 0.2f, 0.2f, 1.0f}; //Color (0.2, 0.2, 0.2)
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientColor);
@@ -272,6 +266,8 @@ void draw3dScene()
     glColor3f(0.0f, 1.0f, 1.0f);
     drawCube(5.0, 0.0, 10.0, 2.0, 10.0, 0.0, 1.0, 0.0 );
 
+    glDisable(GL_LIGHTING); //Disable lighting
+
     // SCREEN BORDERS
     glColor3f(1.0f, 0.0f, 0.0f);
     drawScreen();
@@ -279,14 +275,6 @@ void draw3dScene()
 
 void displayCam(cv::Mat camImage)
 {
-    cv::flip(camImage, camImage, 0);
-    cv::resize(camImage, camImage, cv::Size(camRatio*camWidth, camRatio*camHeight), 0, 0, cv::INTER_CUBIC);
-    glDrawPixels( camImage.size().width, camImage.size().height, GL_BGR, GL_UNSIGNED_BYTE, camImage.ptr() );
-}
-
-void displayCoord()
-{
-
     //-- Save matrix
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
@@ -296,20 +284,31 @@ void displayCoord()
     glPushMatrix();
     glLoadIdentity();
 
-    //-- Coord text
-    std::stringstream sstm;
-    sstm << "(x,y,z) = (" << (int)glCamX << "," << (int)glCamY << "," << (int)glCamZ << ")";
-    std::string s = sstm.str();
-
-    //-- Display text
-    glColor3f(1.0, 1.0, 1.1);
-    glRasterPos2i(10, 10);
-    void * font = GLUT_BITMAP_9_BY_15;
-    for (std::string::iterator i = s.begin(); i != s.end(); ++i)
+    //-- Display Coordinates
+    if(bDisplayDetection)
     {
-      char c = *i;
-      glutBitmapCharacter(font, c);
+        //-- Coord text
+        std::stringstream sstm;
+        sstm << "(x,y,z) = (" << (int)glCamX << "," << (int)glCamY << "," << (int)glCamZ << ")";
+        std::string s = sstm.str();
+        //std::cout<<s<<std::endl;
+
+        //-- Display text
+        glColor3f(1.0, 1.0, 1.0);
+        glRasterPos2i(10,  windowHeight-(camRatio*camImage.size().height)-20);
+        void * font = GLUT_BITMAP_9_BY_15;
+        for (std::string::iterator i = s.begin(); i != s.end(); ++i)
+        {
+          char c = *i;
+          glutBitmapCharacter(font, c);
+        }
     }
+
+    //-- Display image
+    glRasterPos2i(0, windowHeight-(camRatio*camImage.size().height));
+    cv::flip(camImage, camImage, 0);
+    cv::resize(camImage, camImage, cv::Size(camRatio*camWidth, camRatio*camHeight), 0, 0, cv::INTER_CUBIC);
+    glDrawPixels( camImage.size().width, camImage.size().height, GL_BGR, GL_UNSIGNED_BYTE, camImage.ptr() );
 
     //-- Load matrix
     glMatrixMode(GL_PROJECTION);
@@ -449,10 +448,6 @@ void onKeyboard( unsigned char key, int x, int y )
     else switch ( key )
     {
         // change cam display
-        case 't': bDisplayText = !bDisplayText; break;
-        case 'T': bDisplayText = !bDisplayText; break;
-
-        // change cam display
         case 'c': bDisplayCam = !bDisplayCam; break;
         case 'C': bDisplayCam = !bDisplayCam; break;
 
@@ -461,7 +456,7 @@ void onKeyboard( unsigned char key, int x, int y )
         case 'D': bDisplayDetection = !bDisplayDetection; break;
 
         // change cam ratio
-        case '+': if(camRatio < 1.9) camRatio += 0.1 ; break;
+        case '+': if(camRatio < 1.8) camRatio += 0.1 ; break;
         case '-': if(camRatio > 0.2) camRatio -= 0.1; break;
 
         // change axes display
