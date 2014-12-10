@@ -19,9 +19,9 @@ const bool bFullScreen = true;
 const int minFaceSize = 80; // in pixel. The smaller it is, the further away you can go
 const float cvCamViewAngleXDeg = 48.55;
 const float cvCamViewAngleYDeg = 40.37;
-const float cx = 362.9;
-const float cy = 395.84;
-const float f = 804.71;
+const float cx = 362.9; // not egal to W/2 = 320
+const float cy = 295.84; // Not egal to H/2 = 240
+const float f = 500; //804.71
 const float eyesGap = 6.5; //cm
 
 
@@ -37,9 +37,9 @@ int windowHeight;
 int camWidth;
 int camHeight;
 
-float glCamX;
-float glCamY;
-float glCamZ;
+GLdouble glCamX;
+GLdouble glCamY;
+GLdouble glCamZ;
 
 /** Functions */
 void redisplay();
@@ -168,48 +168,22 @@ cv::Mat detectEyes(cv::Mat image) {
     for( size_t i = 0; i < faces.size(); i++ )
     {
         // EYES
+        //-- points in pixel
         cv::Point leftEyePt( faces[i].x + faces[i].width*0.30, faces[i].y + faces[i].height*0.37 );
         cv::Point rightEyePt( faces[i].x + faces[i].width*0.70, faces[i].y + faces[i].height*0.37 );
         cv::Point eyeCenterPt( faces[i].x + faces[i].width*0.5, leftEyePt.y );
 
-        float testX1 = (rightEyePt.x - cx)/f;
-        float testX2 = (leftEyePt.x - cx)/f;
-        float spaceZ = 0.5*eyesGap/(testX1-testX2);
-        std::cout<<spaceZ<<std::endl;
+        //-- normalize with webcam internal parameters
+        GLdouble normRightEye = (rightEyePt.x - camWidth/2)/f;
+        GLdouble normLeftEye = (leftEyePt.x - camWidth/2)/f;
+        GLdouble normCenterX = (eyeCenterPt.x - camWidth/2)/f;
+        GLdouble normCenterY = (eyeCenterPt.y - camHeight/2)/f;
 
-        // COORDINATES
-        //-- z
-        int imgEyesGap = rightEyePt.x-leftEyePt.x;
-        float tempsGLCamZ = (550.0*eyesGap)/imgEyesGap;
-        glCamZ = (tempsGLCamZ+glCamZ)/2.0;
-        //-- x
-        float ratioX = (float)eyeCenterPt.x/camWidth;
-        if(ratioX <= 0.5){
-            float phi1 = cvCamViewAngleXDeg * ratioX;
-            float phi2 = (cvCamViewAngleXDeg/2.0)-phi1;
-            float tempGLCamX = -glCamZ*tan(phi2*M_PI/180.0);
-            glCamX = (tempGLCamX+glCamX)/2.0;
-        }else if(ratioX > 0.5){
-            float phi1 = cvCamViewAngleXDeg * ratioX;
-            float phi2 = phi1-(cvCamViewAngleXDeg/2.0);
-            float tempGLCamX = glCamZ*tan(phi2*M_PI/180.0);
-            glCamX = (tempGLCamX+glCamX)/2.0;
-        }
-        //-- y
-        float ratioY = (float)eyeCenterPt.y/camHeight;
-        if(ratioY <= 0.5){
-            float phi1 = cvCamViewAngleYDeg * ratioY;
-            float phi2 = (cvCamViewAngleYDeg/2.0)-phi1;
-            float tempGLCamY = glCamZ*tan(phi2*M_PI/180.0);
-            glCamY = (tempGLCamY+glCamY)/2.0;
-        }else if(ratioY > 0.5){
-            float phi1 = cvCamViewAngleYDeg * ratioY;
-            float phi2 = phi1-(cvCamViewAngleYDeg/2.0);
-            float tempGLCamY = -glCamZ*tan(phi2*M_PI/180.0);
-            glCamY = (tempGLCamY+glCamY)/2.0;
-        }
-        //-- cout
-        //std::cout<<"(x,y,z) = ("<<(int)glCamX<<","<<(int)glCamY<<","<<(int)glCamZ<<")"<<std::endl;
+        //-- get space coordinates
+        glCamZ = eyesGap/(normRightEye-normLeftEye);
+        glCamX = normCenterX*glCamZ;
+        glCamY = -normCenterY*glCamZ;
+        std::cout<<"(x,y,z) = ("<<(int)glCamX<<","<<(int)glCamY<<","<<(int)glCamZ<<")"<<std::endl;
 
         //DISPLAY
         if(bDisplayDetection)
@@ -245,7 +219,7 @@ void setGlCamera()
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     //-- gluPerspective is arbitrarily set, you will have to determine these values based
-    gluPerspective(60, windowWidth*1.0/windowHeight, 1, 20);
+    gluPerspective(60, (float)windowWidth/(float)windowHeight, 1, 20);
     //-- you will have to set modelview matrix using extrinsic camera params
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -290,8 +264,6 @@ void draw3dScene()
     glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
     glColor3f(0.0f, 1.0f, 1.0f);
     drawCube();
-
-
 }
 
 void drawCube()
@@ -376,7 +348,9 @@ void drawAxes(float length)
  */
 void onReshape( int w, int h )
 {
-  //glViewport( 0, 0, w, h );
+    windowWidth = w;
+    windowHeight = h;
+    glViewport( 0, 0, windowWidth, windowHeight );
 }
 
 /**
