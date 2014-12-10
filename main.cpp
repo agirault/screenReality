@@ -48,7 +48,7 @@ void setGlCamera();
 void draw3dScene();
 void displayCam(cv::Mat camImage);
 
-void drawScreen();
+void drawScreenFrame();
 void drawCube(float x, float y, float z, float l, float angle, float ax, float ay, float az );
 void drawAxes(float length);
 
@@ -123,7 +123,11 @@ int main( int argc, char **argv )
 }
 
 /**
- * @function display
+ * @function redisplay
+ * (Called at each openGL step)
+ * - Processes the webcam frame to detect the eyes with OpenCV,
+ * - Creates a 3D scene with OpenGL,
+ * - Render the scene and the webcam image.
  */
 void redisplay()
 {
@@ -151,6 +155,13 @@ void redisplay()
     glutPostRedisplay();
 }
 
+/**
+ * @function detectEyes
+ * - Uses OpenCV to detect face
+ * - Interpolate eyes position on image
+ * - Computes eyes position in space
+ * - Add some display for the detection
+ */
 cv::Mat detectEyes(cv::Mat image)
 {
     // INIT
@@ -209,6 +220,10 @@ cv::Mat detectEyes(cv::Mat image)
     return image;
 }
 
+/**
+ * @function setGlCamera
+ * Set OpenGL camera parameters
+ */
 void setGlCamera()
 {
     // CAMERA PARAMETERS
@@ -222,6 +237,10 @@ void setGlCamera()
     gluLookAt(glCamX, glCamY, glCamZ, 0, 0, 0, 0, 1, 0);
 }
 
+/**
+ * @function draw3dScene
+ * Draws OpenGL 3D scene
+ */
 void draw3dScene()
 {
     // DISPLAY MODE
@@ -264,9 +283,13 @@ void draw3dScene()
 
     // SCREEN BORDERS
     glColor3f(1.0f, 0.0f, 0.0f);
-    drawScreen();
+    drawScreenFrame();
 }
 
+/**
+ * @function displayCam
+ * Draws the webcam image in window + detection info
+ */
 void displayCam(cv::Mat camImage)
 {
     //-- Save matrix
@@ -311,7 +334,12 @@ void displayCam(cv::Mat camImage)
     glPopMatrix();
 }
 
-void drawScreen()
+/**
+ * @function drawScreenFrame
+ * Draws lines between the corners of what we consider to be the screen
+ * (We are now attempting to project that image on the screen with an homography)
+ */
+void drawScreenFrame()
 {
     float cx = (float)windowWidth/40.0;
     float cy = (float)windowHeight/40.0;
@@ -324,6 +352,10 @@ void drawScreen()
     glEnd();
 }
 
+/**
+ * @function drawCube
+ * Draws a cube object
+ */
 void drawCube(float x, float y, float z, float l, float angle, float ax, float ay, float az )
 {
     glTranslatef(x, y, z);
@@ -381,7 +413,7 @@ void drawCube(float x, float y, float z, float l, float angle, float ax, float a
 
 /**
  * @function drawAxes
- * A useful function for displaying your coordinate system
+ ** Display the coordinate system
  */
 void drawAxes(float length)
 {
@@ -404,6 +436,7 @@ void drawAxes(float length)
 
 /**
  * @function onReshape;
+ ** Adapts the viewport to the window size when the window is reshaped
  */
 void onReshape( int w, int h )
 {
@@ -467,6 +500,8 @@ void onKeyboard( unsigned char key, int x, int y )
 
 /**
  * @function onIdle
+ * (Called at each openGL step)
+ * Updates the 'frame' image from the captured video
  */
 void onIdle()
 {
