@@ -30,6 +30,7 @@ cv::Mat frame;
 bool bFullScreen = false;
 bool bDisplayCam = true;
 bool bDisplayDetection = true;
+bool bDisplayMode = false;
 float camRatio = 0.5;
 
 //-- dimensions
@@ -159,8 +160,8 @@ void redisplay()
     glutPostRedisplay();
 }
 
-cv::Mat detectEyes(cv::Mat image) {
-
+cv::Mat detectEyes(cv::Mat image)
+{
     // INIT
     std::vector<cv::Rect> faces;
     cv::Mat image_gray;
@@ -214,7 +215,6 @@ cv::Mat detectEyes(cv::Mat image) {
             cv::circle(image, eyeCenterPt, 2, cv::Scalar( 0, 0, 255 ), 3, 1, 0);
         }
     }
-
     return image;
 }
 
@@ -234,17 +234,23 @@ void setGlCamera()
 
 void draw3dScene()
 {
+    // DISPLAY MODE
+    if(bDisplayMode){
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        drawAxes(10.0);
+    }else{
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+
     // LIGHTING
     //-- Add ambient light
     GLfloat ambientColor[] = {0.2f, 0.2f, 0.2f, 1.0f}; //Color (0.2, 0.2, 0.2)
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientColor);
-
     //-- Add positioned light
     GLfloat lightColor0[] = {0.5f, 0.5f, 0.5f, 1.0f}; //Color (0.5, 0.5, 0.5)
     GLfloat lightPos0[] = {4.0f, 0.0f, 8.0f, 1.0f}; //Positioned at (4, 0, 8)
     glLightfv(GL_LIGHT0, GL_DIFFUSE, lightColor0);
     glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
-
     //-- Add directed light
     GLfloat lightColor1[] = {0.5f, 0.2f, 0.2f, 1.0f}; //Color (0.5, 0.2, 0.2)
     //Coming from the direction (-1, 0.5, 0.5)
@@ -256,11 +262,9 @@ void draw3dScene()
     //-- Cube 1
     glColor3f(1.0f, 1.0f, 0.0f);
     drawCube(0.0, 0.0, 0.0, 6.0, 30.0, 0.0, 1.0, 0.0 );
-
     //-- Cube 2
     glColor3f(1.0f, 0.0f, 1.0f);
     drawCube(-20.0, 0.0, -40.0, 4, 70.0, 0.0, 1.0, 0.0 );
-
     //-- Cube 3
     glColor3f(0.0f, 1.0f, 1.0f);
     drawCube(5.0, 0.0, 10.0, 2.0, 10.0, 0.0, 1.0, 0.0 );
@@ -268,7 +272,6 @@ void draw3dScene()
     // SCREEN BORDERS
     glColor3f(1.0f, 0.0f, 0.0f);
     drawScreen();
-
 }
 
 void drawScreen()
@@ -345,25 +348,21 @@ void drawCube(float x, float y, float z, float l, float angle, float ax, float a
  */
 void drawAxes(float length)
 {
-  glPushAttrib(GL_POLYGON_BIT | GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT) ;
-
-  glPolygonMode(GL_FRONT_AND_BACK, GL_LINE) ;
 
   glBegin(GL_LINES) ;
-  glColor3f(1,0,0) ;
-  glVertex3f(0,0,0) ;
-  glVertex3f(length,0,0);
+      glColor3f(1,0,0) ;
+      glVertex3f(0,0,0) ;
+      glVertex3f(length,0,0);
 
-  glColor3f(0,1,0) ;
-  glVertex3f(0,0,0) ;
-  glVertex3f(0,length,0);
+      glColor3f(0,1,0) ;
+      glVertex3f(0,0,0) ;
+      glVertex3f(0,length,0);
 
-  glColor3f(0,0,1) ;
-  glVertex3f(0,0,0) ;
-  glVertex3f(0,0,length);
+      glColor3f(0,0,1) ;
+      glVertex3f(0,0,0) ;
+      glVertex3f(0,0,length);
   glEnd() ;
 
-  glPopMatrix() ;
 }
 
 /**
@@ -416,6 +415,10 @@ void onKeyboard( unsigned char key, int x, int y )
         // change cam ratio
         case '+': if(camRatio < 1.9) camRatio += 0.1 ; break;
         case '-': if(camRatio > 0.2) camRatio -= 0.1; break;
+
+        // change axes display
+        case 'm': bDisplayMode = !bDisplayMode; break;
+        case 'M': bDisplayMode = !bDisplayMode; break;
 
         // quit app
         case 'q': exit(0); break;
