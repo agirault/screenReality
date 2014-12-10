@@ -362,49 +362,48 @@ void drawCube(float x, float y, float z, float l, float angle, float ax, float a
     glRotatef(angle, ax, ay, az);
 
     glBegin(GL_QUADS);
+
         //Front
-        glNormal3f(0.0, 0.0, l);
-        //glNormal3f(-l, 0.0, l);
+        glNormal3f(0.0, 0.0, 1.0);
         glVertex3f(-l, -l, l);
-        //glNormal3f(l, 0.0, l);
         glVertex3f(l, -l, l);
-        //glNormal3f(l, 0.0, l);
         glVertex3f(l, l, l);
-        //glNormal3f(-l, 0.0, l);
         glVertex3f(-l, l, l);
 
         //Right
-        glNormal3f(l, 0.0, 0.0);
-        //glNormal3f(l, 0.0, -l);
+        glNormal3f(1.0, 0.0, 0.0);
         glVertex3f(l, -l, -l);
-        //glNormal3f(l, 0.0, -l);
         glVertex3f(l, l, -l);
-        //glNormal3f(l, 0.0, l);
         glVertex3f(l, l, l);
-        //glNormal3f(l, 0.0, l);
         glVertex3f(l, -l, l);
 
         //Back
-        glNormal3f(0.0, 0.0, -l);
-        //glNormal3f(-l, 0.0, -l);
+        glNormal3f(0.0, 0.0, -1.0);
         glVertex3f(-l, -l, -l);
-        //glNormal3f(-l, 0.0, -l);
         glVertex3f(-l, l, -l);
-        //glNormal3f(l, 0.0, -l);
         glVertex3f(l, l, -l);
-        //glNormal3f(l, 0.0, -l);
         glVertex3f(l, -l, -l);
 
         //Left
-        glNormal3f(-l, 0.0, 0.0);
-        //glNormal3f(-l, 0.0, -l);
+        glNormal3f(-1.0, 0.0, 0.0);
         glVertex3f(-l, -l, -l);
-        //glNormal3f(-l, 0.0, l);
         glVertex3f(-l, -l, l);
-        //glNormal3f(-l, 0.0, l);
         glVertex3f(-l, l, l);
-        //glNormal3f(-l, 0.0, -l);
         glVertex3f(-l, l, -l);
+
+        //Top
+        glNormal3f(0.0, 1.0, 0.0);
+        glVertex3f(-l, l, -l);
+        glVertex3f(-l, l, l);
+        glVertex3f(l, l, l);
+        glVertex3f(l, l, -l);
+
+        //Bottom
+        glNormal3f(0.0, -1.0, 0.0);
+        glVertex3f(-l, -l, -l);
+        glVertex3f(-l, -l, l);
+        glVertex3f(l, -l, l);
+        glVertex3f(l, -l, -l);
 
     glEnd();
     glRotatef(-angle, ax, ay, az);
