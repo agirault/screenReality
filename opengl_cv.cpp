@@ -11,11 +11,6 @@
 #include <math.h>
 
 /** Constants */
-const bool bFullScreen = true;
-const bool bDisplayDetection = true;
-const float camRatio = 0.5;
-const float windowRatio = 1.0;
-
 const int minFaceSize = 80; // in pixel. The smaller it is, the further away you can go
 const float cvCamViewAngleXDeg = 48.55;
 const float cvCamViewAngleYDeg = 40.37;
@@ -24,19 +19,26 @@ const float cy = 295.84; // Not egal to H/2 = 240
 const float f = 500; //804.71
 const float eyesGap = 6.5; //cm
 
-
 /** Global variables */
-//-- Note, either copy these two files from opencv/data/haarscascades to your current folder, or change these locations
+//-- capture opencv
 cv::String face_cascade_name = "/home/alexis/Support/opencv-2.4.10/data/haarcascades/haarcascade_frontalface_alt.xml";
 cv::CascadeClassifier face_cascade;
 cv::VideoCapture *capture = NULL;
 cv::Mat frame;
 
+//-- display
+bool bFullScreen = false;
+bool bDisplayCam = true;
+bool bDisplayDetection = true;
+float camRatio = 0.5;
+
+//-- dimensions
 int windowWidth;
 int windowHeight;
 int camWidth;
 int camHeight;
 
+//-- opengl camera
 GLdouble glCamX;
 GLdouble glCamY;
 GLdouble glCamZ;
@@ -85,8 +87,8 @@ int main( int argc, char **argv )
     glutInit( &argc, argv );
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
     if(!bFullScreen){
-        windowWidth = camWidth*windowRatio;
-        windowHeight = camHeight*windowRatio;
+        windowWidth = camWidth*1.5;
+        windowHeight = camHeight*1.5;
         glutInitWindowPosition( 20, 20 );
         glutInitWindowSize( windowWidth, windowHeight );
     }
@@ -102,11 +104,11 @@ int main( int argc, char **argv )
     glShadeModel(GL_SMOOTH); //Enable smooth shading
 
     // SCREEN DIMENSIONS
-    windowWidth = glutGet(GLUT_SCREEN_WIDTH);
-    windowHeight = glutGet(GLUT_SCREEN_HEIGHT);
     if(bFullScreen)
     {
         glutFullScreen();
+        windowWidth = glutGet(GLUT_SCREEN_WIDTH);
+        windowHeight = glutGet(GLUT_SCREEN_HEIGHT);
         glViewport( 0, 0, windowWidth, windowHeight );
     }
 
@@ -139,13 +141,16 @@ void redisplay()
     tempimage = detectEyes(tempimage);
 
     // OPENGL
+    //-- scene
     setGlCamera();
     draw3dScene();
-
-    //-- display camera frame
-    cv::flip(tempimage, tempimage, 0);
-    cv::resize(tempimage, tempimage, cv::Size(camRatio*camWidth, camRatio*camHeight), 0, 0, cv::INTER_CUBIC);
-    glDrawPixels( tempimage.size().width, tempimage.size().height, GL_BGR, GL_UNSIGNED_BYTE, tempimage.ptr() );
+    //-- cam
+    if(bDisplayCam)
+    {
+        cv::flip(tempimage, tempimage, 0);
+        cv::resize(tempimage, tempimage, cv::Size(camRatio*camWidth, camRatio*camHeight), 0, 0, cv::INTER_CUBIC);
+        glDrawPixels( tempimage.size().width, tempimage.size().height, GL_BGR, GL_UNSIGNED_BYTE, tempimage.ptr() );
+    }
 
     // RENDER
     //-- display on screen
@@ -184,10 +189,10 @@ cv::Mat detectEyes(cv::Mat image) {
         glCamZ = eyesGap/(normRightEye-normLeftEye);
         glCamX = normCenterX*glCamZ;
         glCamY = -normCenterY*glCamZ;
-        std::cout<<"(x,y,z) = ("<<(int)glCamX<<","<<(int)glCamY<<","<<(int)glCamZ<<")"<<std::endl;
+        //std::cout<<"(x,y,z) = ("<<(int)glCamX<<","<<(int)glCamY<<","<<(int)glCamZ<<")"<<std::endl;
 
         //DISPLAY
-        if(bDisplayDetection)
+        if(bDisplayCam && bDisplayDetection)
         {
             //-- face rectangle
             cv::rectangle(image, faces[i], 1234);
@@ -399,15 +404,36 @@ void onMouse( int button, int state, int x, int y )
  */
 void onKeyboard( unsigned char key, int x, int y )
 {
-  switch ( key )
+    if(((int)key == 27) && bFullScreen)
     {
-    case 'q':
-      // quit when q is pressed
-      exit(0);
-      break;
+        glutReshapeWindow(camWidth*1.5, camHeight*1.5);
+        glutPositionWindow(0,0);
+        bFullScreen = false;
+    }
+    else if((key == 'f' || key == 'F') && !bFullScreen)
+    {
+        glutFullScreen();
+        bFullScreen = true;
+    }
+    else switch ( key )
+    {
+        // change cam display
+        case 'c': bDisplayCam = !bDisplayCam; break;
+        case 'C': bDisplayCam = !bDisplayCam; break;
 
-    default:
-      break;
+        // change detection display
+        case 'd': bDisplayDetection = !bDisplayDetection; break;
+        case 'D': bDisplayDetection = !bDisplayDetection; break;
+
+        // change cam ratio
+        case '+': if(camRatio < 1.9) camRatio += 0.1 ; break;
+        case '-': if(camRatio > 0.2) camRatio -= 0.1; break;
+
+        // quit app
+        case 'q': exit(0); break;
+        case 'Q': exit(0); break;
+
+        default: break;
     }
 }
 
