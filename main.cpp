@@ -17,7 +17,7 @@ const float eyesGap = 6.5; //cm
 
 /** Global variables */
 //-- capture opencv
-cv::String face_cascade_name = "/home/alexis/Support/opencv-2.4.10/data/haarcascades/haarcascade_frontalface_alt.xml";
+cv::String face_cascade_name = "../../haarcascade_frontalface_alt.xml";
 cv::CascadeClassifier face_cascade;
 cv::VideoCapture *capture = NULL;
 cv::Mat frame;
