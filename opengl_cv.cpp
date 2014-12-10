@@ -49,7 +49,7 @@ cv::Mat detectEyes(cv::Mat image);
 
 void setGlCamera();
 void draw3dScene();
-void drawPoint(float x, float y, float z);
+void drawScreen();
 void drawCube(float x, float y, float z, float l, float angle, float ax, float ay, float az );
 void drawAxes(float length);
 
@@ -89,7 +89,7 @@ int main( int argc, char **argv )
     if(!bFullScreen){
         windowWidth = camWidth*1.5;
         windowHeight = camHeight*1.5;
-        glutInitWindowPosition( 20, 20 );
+        glutInitWindowPosition( 200, 80 );
         glutInitWindowSize( windowWidth, windowHeight );
     }
     glutCreateWindow( "Test OpenGL" );
@@ -225,11 +225,11 @@ void setGlCamera()
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     //-- gluPerspective is arbitrarily set, you will have to determine these values based
-    gluPerspective(60, (float)windowWidth/(float)windowHeight, 1, 20);
+    gluPerspective(60, (float)windowWidth/(float)windowHeight, 1, 250);
     //-- you will have to set modelview matrix using extrinsic camera params
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    gluLookAt(glCamX/10.0, glCamY/10.0, glCamZ/10.0, 0, 0, 0, 0, 1, 0);
+    gluLookAt(glCamX, glCamY, glCamZ, 0, 0, 0, 0, 1, 0);
 }
 
 void draw3dScene()
@@ -252,49 +252,38 @@ void draw3dScene()
     glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor1);
     glLightfv(GL_LIGHT1, GL_POSITION, lightPos1);
 
-    // SCREEN CORNERS
-    glEnable( GL_POINT_SMOOTH );
-    glEnable( GL_BLEND );
-    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-
-    glColor3f(1.0f, 0.0f, 0.0f);
-    drawPoint(0.0, 0.0, 0);
-    drawPoint(3.2, 2.0, 0);
-    drawPoint(3.2, -2.0, 0);
-    drawPoint(-3.2, 2.0, 0);
-    drawPoint(-3.2, -2.0, 0);
-
-
     // GEOMETRY
     //-- Cube 1
     glColor3f(1.0f, 1.0f, 0.0f);
-    drawCube(0.0, -0.2, 0.0, 0.8, 30.0, 0.0, 1.0, 0.0 );
+    drawCube(0.0, 0.0, 0.0, 6.0, 30.0, 0.0, 1.0, 0.0 );
 
     //-- Cube 2
     glColor3f(1.0f, 0.0f, 1.0f);
-    drawCube(-3.0, 0.0, -2.0, 1.0, 70.0, 0.0, 1.0, 0.0 );
+    drawCube(-20.0, 0.0, -40.0, 4, 70.0, 0.0, 1.0, 0.0 );
 
     //-- Cube 3
     glColor3f(0.0f, 1.0f, 1.0f);
-    drawCube(1.0, -0.7, 1.5, 0.3, 10.0, 0.0, 1.0, 0.0 );
+    drawCube(5.0, 0.0, 10.0, 2.0, 10.0, 0.0, 1.0, 0.0 );
+
+    // SCREEN BORDERS
+    glColor3f(1.0f, 0.0f, 0.0f);
+    drawScreen();
 
 }
 
-void drawPoint(float x, float y, float z)
+void drawScreen()
 {
-    float dx = (glCamX/10.0)- x;
-    float dy = (glCamY/10.0)- y;
-    float dz = (glCamZ/10.0)- z;
+    float cx = (float)windowWidth/40.0;
+    float cy = (float)windowHeight/40.0;
 
-    float norm = sqrt(dx*dx + dy*dy + dz*dz);
-    float size = 100.0/norm;
-    glPointSize( size );
-
-    //glPointSize(15.0);
-    glBegin( GL_POINTS );
-        glVertex3f( x, y, z );
+    glBegin(GL_LINE_LOOP);
+        glVertex3f(cx, cy, 0);
+        glVertex3f(cx, -cy, 0);
+        glVertex3f(-cx, -cy, 0);
+        glVertex3f(-cx, cy, 0);
     glEnd();
 }
+
 void drawCube(float x, float y, float z, float l, float angle, float ax, float ay, float az )
 {
     glTranslatef(x, y, z);
@@ -403,13 +392,13 @@ void onMouse( int button, int state, int x, int y )
  */
 void onKeyboard( unsigned char key, int x, int y )
 {
-    if(((int)key == 27) && bFullScreen)
+    if( bFullScreen && ((key == 'f' || key == 'F') || ((int)key == 27)))
     {
         glutReshapeWindow(camWidth*1.5, camHeight*1.5);
-        glutPositionWindow(0,0);
+        glutPositionWindow( 200, 80);
         bFullScreen = false;
     }
-    else if((key == 'f' || key == 'F') && !bFullScreen)
+    else if(!bFullScreen && (key == 'f' || key == 'F'))
     {
         glutFullScreen();
         bFullScreen = true;
