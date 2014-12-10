@@ -30,7 +30,8 @@ cv::Mat frame;
 bool bFullScreen = false;
 bool bDisplayCam = true;
 bool bDisplayDetection = true;
-bool bDisplayMode = false;
+bool bDisplayText = false;
+bool bPolygonMode = false;
 float camRatio = 0.5;
 
 //-- dimensions
@@ -50,6 +51,10 @@ cv::Mat detectEyes(cv::Mat image);
 
 void setGlCamera();
 void draw3dScene();
+
+void displayCam(cv::Mat camImage);
+void displayCoord();
+
 void drawScreen();
 void drawCube(float x, float y, float z, float l, float angle, float ax, float ay, float az );
 void drawAxes(float length);
@@ -146,12 +151,9 @@ void redisplay()
     setGlCamera();
     draw3dScene();
     //-- cam
-    if(bDisplayCam)
-    {
-        cv::flip(tempimage, tempimage, 0);
-        cv::resize(tempimage, tempimage, cv::Size(camRatio*camWidth, camRatio*camHeight), 0, 0, cv::INTER_CUBIC);
-        glDrawPixels( tempimage.size().width, tempimage.size().height, GL_BGR, GL_UNSIGNED_BYTE, tempimage.ptr() );
-    }
+    if(bDisplayCam) displayCam(tempimage);
+    //-- text
+    if(bDisplayText) displayCoord();
 
     // RENDER
     //-- display on screen
@@ -234,8 +236,9 @@ void setGlCamera()
 
 void draw3dScene()
 {
+
     // DISPLAY MODE
-    if(bDisplayMode){
+    if(bPolygonMode){
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         drawAxes(10.0);
     }else{
@@ -272,6 +275,47 @@ void draw3dScene()
     // SCREEN BORDERS
     glColor3f(1.0f, 0.0f, 0.0f);
     drawScreen();
+}
+
+void displayCam(cv::Mat camImage)
+{
+    cv::flip(camImage, camImage, 0);
+    cv::resize(camImage, camImage, cv::Size(camRatio*camWidth, camRatio*camHeight), 0, 0, cv::INTER_CUBIC);
+    glDrawPixels( camImage.size().width, camImage.size().height, GL_BGR, GL_UNSIGNED_BYTE, camImage.ptr() );
+}
+
+void displayCoord()
+{
+
+    //-- Save matrix
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0.0, windowWidth, 0.0, windowHeight);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    //-- Coord text
+    std::stringstream sstm;
+    sstm << "(x,y,z) = (" << (int)glCamX << "," << (int)glCamY << "," << (int)glCamZ << ")";
+    std::string s = sstm.str();
+
+    //-- Display text
+    glColor3f(1.0, 1.0, 1.1);
+    glRasterPos2i(10, 10);
+    void * font = GLUT_BITMAP_9_BY_15;
+    for (std::string::iterator i = s.begin(); i != s.end(); ++i)
+    {
+      char c = *i;
+      glutBitmapCharacter(font, c);
+    }
+
+    //-- Load matrix
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
 }
 
 void drawScreen()
@@ -405,6 +449,10 @@ void onKeyboard( unsigned char key, int x, int y )
     else switch ( key )
     {
         // change cam display
+        case 't': bDisplayText = !bDisplayText; break;
+        case 'T': bDisplayText = !bDisplayText; break;
+
+        // change cam display
         case 'c': bDisplayCam = !bDisplayCam; break;
         case 'C': bDisplayCam = !bDisplayCam; break;
 
@@ -417,8 +465,8 @@ void onKeyboard( unsigned char key, int x, int y )
         case '-': if(camRatio > 0.2) camRatio -= 0.1; break;
 
         // change axes display
-        case 'm': bDisplayMode = !bDisplayMode; break;
-        case 'M': bDisplayMode = !bDisplayMode; break;
+        case 'm': bPolygonMode = !bPolygonMode; break;
+        case 'M': bPolygonMode = !bPolygonMode; break;
 
         // quit app
         case 'q': exit(0); break;
