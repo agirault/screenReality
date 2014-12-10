@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-PROJECT( openglcv_project )
+PROJECT( screenReality )
 
 find_package(OpenCV REQUIRED)
 include_directories( ${OPENCV_INCLUDE_DIRS} )
@@ -19,6 +19,6 @@ add_definitions(${GLUT_DEFINITIONS})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 set(CMAKE_BINARY_DIR ${PROJECT_BINARY_DIR}/bin)
 
-ADD_EXECUTABLE( test main.cpp)
-TARGET_LINK_LIBRARIES( test ${OpenCV_LIBS} ${OPENGL_LIBRARIES} ${GLUT_LIBRARY})
+ADD_EXECUTABLE( screenReality main.cpp)
+TARGET_LINK_LIBRARIES( screenReality ${OpenCV_LIBS} ${OPENGL_LIBRARIES} ${GLUT_LIBRARY})
 
