@@ -12,10 +12,6 @@
 
 /** Constants */
 const int minFaceSize = 80; // in pixel. The smaller it is, the further away you can go
-const float cvCamViewAngleXDeg = 48.55;
-const float cvCamViewAngleYDeg = 40.37;
-const float cx = 362.9; // not egal to W/2 = 320
-const float cy = 295.84; // Not egal to H/2 = 240
 const float f = 500; //804.71
 const float eyesGap = 6.5; //cm
 
@@ -50,9 +46,7 @@ cv::Mat detectEyes(cv::Mat image);
 
 void setGlCamera();
 void draw3dScene();
-
 void displayCam(cv::Mat camImage);
-void displayCoord(cv::Mat camImage);
 
 void drawScreen();
 void drawCube(float x, float y, float z, float l, float angle, float ax, float ay, float az );
