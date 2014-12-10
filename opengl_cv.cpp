@@ -50,7 +50,7 @@ cv::Mat detectEyes(cv::Mat image);
 void setGlCamera();
 void draw3dScene();
 void drawPoint(float x, float y, float z);
-void drawCube();
+void drawCube(float x, float y, float z, float l, float angle, float ax, float ay, float az );
 void drawAxes(float length);
 
 void onReshape( int w, int h );
@@ -167,13 +167,13 @@ cv::Mat detectEyes(cv::Mat image) {
     cv::cvtColor( image, image_gray, CV_BGR2GRAY );
     cv::equalizeHist( image_gray, image_gray );
 
-    // FACE
+    // DETECT FACE
     //-- Find bigger face (opencv documentation)
     face_cascade.detectMultiScale( image_gray, faces, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE|CV_HAAR_FIND_BIGGEST_OBJECT, cv::Size(minFaceSize, minFaceSize) );
 
     for( size_t i = 0; i < faces.size(); i++ )
     {
-        // EYES
+        // DETECT EYES
         //-- points in pixel
         cv::Point leftEyePt( faces[i].x + faces[i].width*0.30, faces[i].y + faces[i].height*0.37 );
         cv::Point rightEyePt( faces[i].x + faces[i].width*0.70, faces[i].y + faces[i].height*0.37 );
@@ -191,7 +191,7 @@ cv::Mat detectEyes(cv::Mat image) {
         glCamY = -normCenterY*glCamZ;
         //std::cout<<"(x,y,z) = ("<<(int)glCamX<<","<<(int)glCamY<<","<<(int)glCamZ<<")"<<std::endl;
 
-        //DISPLAY
+        // DISPLAY
         if(bDisplayCam && bDisplayDetection)
         {
             //-- face rectangle
@@ -257,8 +257,8 @@ void draw3dScene()
     glEnable( GL_BLEND );
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
 
-    glTranslatef(0.0f, 0.0f, 0.0f);
     glColor3f(1.0f, 0.0f, 0.0f);
+    drawPoint(0.0, 0.0, 0);
     drawPoint(3.2, 2.0, 0);
     drawPoint(3.2, -2.0, 0);
     drawPoint(-3.2, 2.0, 0);
@@ -266,23 +266,17 @@ void draw3dScene()
 
 
     // GEOMETRY
-    //-- Pose and Color
-    glTranslatef(0.0f, 0.0f, 0.0f);
-    glRotatef(30.0f, 0.0f, 1.0f, 0.0f);
+    //-- Cube 1
     glColor3f(1.0f, 1.0f, 0.0f);
-    drawCube();
+    drawCube(0.0, -0.2, 0.0, 0.8, 30.0, 0.0, 1.0, 0.0 );
 
-    //-- Pose and Color
-    glTranslatef(-2.0f, 0.0f, -2.0f);
-    glRotatef(70.0f, 0.0f, 1.0f, 0.0f);
+    //-- Cube 2
     glColor3f(1.0f, 0.0f, 1.0f);
-    drawCube();
+    drawCube(-3.0, 0.0, -2.0, 1.0, 70.0, 0.0, 1.0, 0.0 );
 
-    //-- Pose and Color
-    glTranslatef(0.0f, 0.0f, 6.0f);
-    glRotatef(10.0f, 0.0f, 1.0f, 0.0f);
+    //-- Cube 3
     glColor3f(0.0f, 1.0f, 1.0f);
-    drawCube();
+    drawCube(1.0, -0.7, 1.5, 0.3, 10.0, 0.0, 1.0, 0.0 );
 
 }
 
@@ -301,54 +295,59 @@ void drawPoint(float x, float y, float z)
         glVertex3f( x, y, z );
     glEnd();
 }
-void drawCube()
+void drawCube(float x, float y, float z, float l, float angle, float ax, float ay, float az )
 {
+    glTranslatef(x, y, z);
+    glRotatef(angle, ax, ay, az);
+
     glBegin(GL_QUADS);
         //Front
-        glNormal3f(0.0f, 0.0f, 1.0f);
-        //glNormal3f(-1.0f, 0.0f, 1.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        //glNormal3f(1.0f, 0.0f, 1.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
-        //glNormal3f(1.0f, 0.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        //glNormal3f(-1.0f, 0.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
+        glNormal3f(0.0, 0.0, l);
+        //glNormal3f(-l, 0.0, l);
+        glVertex3f(-l, -l, l);
+        //glNormal3f(l, 0.0, l);
+        glVertex3f(l, -l, l);
+        //glNormal3f(l, 0.0, l);
+        glVertex3f(l, l, l);
+        //glNormal3f(-l, 0.0, l);
+        glVertex3f(-l, l, l);
 
         //Right
-        glNormal3f(1.0f, 0.0f, 0.0f);
-        //glNormal3f(1.0f, 0.0f, -1.0f);
-        glVertex3f(1.0f, -1.0f, -1.0f);
-        //glNormal3f(1.0f, 0.0f, -1.0f);
-        glVertex3f(1.0f, 1.0f, -1.0f);
-        //glNormal3f(1.0f, 0.0f, 1.0f);
-        glVertex3f(1.0f, 1.0f, 1.0f);
-        //glNormal3f(1.0f, 0.0f, 1.0f);
-        glVertex3f(1.0f, -1.0f, 1.0f);
+        glNormal3f(l, 0.0, 0.0);
+        //glNormal3f(l, 0.0, -l);
+        glVertex3f(l, -l, -l);
+        //glNormal3f(l, 0.0, -l);
+        glVertex3f(l, l, -l);
+        //glNormal3f(l, 0.0, l);
+        glVertex3f(l, l, l);
+        //glNormal3f(l, 0.0, l);
+        glVertex3f(l, -l, l);
 
         //Back
-        glNormal3f(0.0f, 0.0f, -1.0f);
-        //glNormal3f(-1.0f, 0.0f, -1.0f);
-        glVertex3f(-1.0f, -1.0f, -1.0f);
-        //glNormal3f(-1.0f, 0.0f, -1.0f);
-        glVertex3f(-1.0f, 1.0f, -1.0f);
-        //glNormal3f(1.0f, 0.0f, -1.0f);
-        glVertex3f(1.0f, 1.0f, -1.0f);
-        //glNormal3f(1.0f, 0.0f, -1.0f);
-        glVertex3f(1.0f, -1.0f, -1.0f);
+        glNormal3f(0.0, 0.0, -l);
+        //glNormal3f(-l, 0.0, -l);
+        glVertex3f(-l, -l, -l);
+        //glNormal3f(-l, 0.0, -l);
+        glVertex3f(-l, l, -l);
+        //glNormal3f(l, 0.0, -l);
+        glVertex3f(l, l, -l);
+        //glNormal3f(l, 0.0, -l);
+        glVertex3f(l, -l, -l);
 
         //Left
-        glNormal3f(-1.0f, 0.0f, 0.0f);
-        //glNormal3f(-1.0f, 0.0f, -1.0f);
-        glVertex3f(-1.0f, -1.0f, -1.0f);
-        //glNormal3f(-1.0f, 0.0f, 1.0f);
-        glVertex3f(-1.0f, -1.0f, 1.0f);
-        //glNormal3f(-1.0f, 0.0f, 1.0f);
-        glVertex3f(-1.0f, 1.0f, 1.0f);
-        //glNormal3f(-1.0f, 0.0f, -1.0f);
-        glVertex3f(-1.0f, 1.0f, -1.0f);
+        glNormal3f(-l, 0.0, 0.0);
+        //glNormal3f(-l, 0.0, -l);
+        glVertex3f(-l, -l, -l);
+        //glNormal3f(-l, 0.0, l);
+        glVertex3f(-l, -l, l);
+        //glNormal3f(-l, 0.0, l);
+        glVertex3f(-l, l, l);
+        //glNormal3f(-l, 0.0, -l);
+        glVertex3f(-l, l, -l);
 
     glEnd();
+    glRotatef(-angle, ax, ay, az);
+    glTranslatef(-x, -y, -z);
 }
 
 /**
