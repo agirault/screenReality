@@ -23,7 +23,7 @@ cv::VideoCapture *capture = NULL;
 cv::Mat frame;
 
 //-- display
-bool bFullScreen = false;
+bool bFullScreen = true;
 bool bDisplayCam = true;
 bool bDisplayDetection = true;
 bool bPolygonMode = false;
@@ -34,6 +34,10 @@ int windowWidth;
 int windowHeight;
 int camWidth;
 int camHeight;
+
+//-- scene
+float angleRotY = 0.0;
+float angleRotX = 0.0;
 
 //-- opengl camera
 GLdouble glCamX;
@@ -55,6 +59,7 @@ void drawAxes(float length);
 void onReshape( int w, int h );
 void onMouse( int button, int state, int x, int y );
 void onKeyboard( unsigned char key, int x, int y );
+void onSpecialKey(int key, int x, int y);
 void onIdle();
 
 
@@ -114,6 +119,7 @@ int main( int argc, char **argv )
     glutReshapeFunc( onReshape );
     glutMouseFunc( onMouse );
     glutKeyboardFunc( onKeyboard );
+    glutSpecialFunc( onSpecialKey );
     glutIdleFunc( onIdle );
 
     // GUI LOOP
@@ -251,6 +257,10 @@ void draw3dScene()
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
 
+    // SCREEN BORDERS
+    glColor3f(1.0f, 0.0f, 0.0f);
+    drawScreenFrame();
+
     // LIGHTING
     glEnable(GL_LIGHTING); //Enable lighting
     //-- Add ambient light
@@ -268,6 +278,11 @@ void draw3dScene()
     glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor1);
     glLightfv(GL_LIGHT1, GL_POSITION, lightPos1);
 
+    // MOVE SCENE
+    //glTranslatef(x, y, z);
+    glRotatef(angleRotX, 1.0, 0.0, 0.0);
+    glRotatef(angleRotY, 0.0, 1.0, 0.0);
+
     // GEOMETRY
     //-- Cube 1
     glColor3f(1.0f, 1.0f, 0.0f);
@@ -281,9 +296,6 @@ void draw3dScene()
 
     glDisable(GL_LIGHTING); //Disable lighting
 
-    // SCREEN BORDERS
-    glColor3f(1.0f, 0.0f, 0.0f);
-    drawScreenFrame();
 }
 
 /**
@@ -497,6 +509,24 @@ void onKeyboard( unsigned char key, int x, int y )
     }
 }
 
+void onSpecialKey( int key, int x, int y)
+{
+    switch (key)
+    {
+    case GLUT_KEY_LEFT:
+        angleRotY -= 1.0;
+        break;
+    case GLUT_KEY_RIGHT:
+        angleRotY += 1.0;
+        break;
+    case GLUT_KEY_DOWN:
+        angleRotX += 1.0;
+        break;
+    case GLUT_KEY_UP:
+        angleRotX -= 1.0;
+        break;
+    }
+}
 /**
  * @function onIdle
  * (Called at each openGL step)
