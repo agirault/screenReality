@@ -13,6 +13,9 @@
 const int minFaceSize = 80; // in pixel. The smaller it is, the further away you can go
 const float f = 500; //804.71
 const float eyesGap = 6.5; //cm
+const float pixelNbrPerCm = 40.0;
+const float far = 200;
+const float near = 0.5;
 
 /** Global variables */
 //-- capture opencv
@@ -26,7 +29,7 @@ bool bFullScreen = true;            //- press 'f' to change
 bool bDisplayCam = true;            //- press 'c' to change
 bool bDisplayDetection = true;      //- press 'd' to change
 bool bPolygonMode = false;          //- press 'm' to change
-bool bHomographyCorrection = false; //- press 'h' to change (does not work yet)
+bool bProjectionMode = true;        //- press 'p' to change
 float camRatio = 0.3;               //- press '+/-' to change
 float angleRotY = 0.0;              //- press 'LEFT/RIGHT' to change
 float angleRotX = 0.0;              //- press 'UP/DOWN' to change
@@ -225,74 +228,80 @@ cv::Mat detectEyes(cv::Mat image)
 
 /**
  * @function setGlCamera
- * Set OpenGL camera parameters
+ * Set OpenGL camera parameters.
+ * The off-axis projection is what gives
+ * the feeling of augmented reality.
  */
 void setGlCamera()
 {
-    // CAMERA PARAMETERS
-    //-- set projection matrix using intrinsic camera params
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(60, (float)windowWidth/(float)windowHeight, 1, 250);
-    //-- you will have to set modelview matrix using extrinsic camera params
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    gluLookAt(glCamX, glCamY, glCamZ, 0, 0, 0, 0, 1, 0);
-
-    // HOMOGRAPHY CORRECTION
-    if(bHomographyCorrection)
+    if(bProjectionMode)
     {
-        //-- matrix
-        float modelview[16];
-        float projection[16];
-        glGetFloatv (GL_MODELVIEW_MATRIX, modelview);
-        glGetFloatv (GL_PROJECTION_MATRIX, projection);
-        cv::Mat modelM(4,4,CV_32F,modelview);
-        cv::Mat projM(4,4,CV_32F,projection);
-        cv::Mat M = projM*modelM;                           //in that order?
-        //-- opengl camera center
-        float cx = (float)windowWidth/40.0;
-        float cy = (float)windowHeight/40.0;
+        /* SKEWED FRUSTRUM / OFF-AXIS PROJECTION
+        ** My implementation is based on the following paper:
+        ** Name:   Generalized Perspective Projection
+        ** Author: Robert Kooima
+        ** Date:   August 2008, revised June 2009
+        */
+
+        float cx = (float)windowWidth/pixelNbrPerCm;
+        float cy = (float)windowHeight/pixelNbrPerCm;
+
         //-- space corners coordinates
-        float p0[4]={cx,cy,0,1};
-        float p1[4]={-cx,cy,0,1};
-        float p2[4]={-cx,-cy,0,1};
-        float p3[4]={cx,-cy,0,1};
-        //-- space corners matrix
-        cv::Mat P0(4,1,CV_32F,p0);
-        cv::Mat P1(4,1,CV_32F,p1);
-        cv::Mat P2(4,1,CV_32F,p2);
-        cv::Mat P3(4,1,CV_32F,p3);
-        //-- projected corners matrix
-        cv::Mat Q0 = M*P0;
-        cv::Mat Q1 = M*P1;
-        cv::Mat Q2 = M*P2;
-        cv::Mat Q3 = M*P3;
-        //-- projected corners divided by z
-        Q0 /= Q0.at<float>(2.0,0.0);
-        Q1 /= Q1.at<float>(2.0,0.0);
-        Q2 /= Q2.at<float>(2.0,0.0);
-        Q3 /= Q3.at<float>(2.0,0.0);
-        //-- space corners points
-        cv::vector<cv::Point2f> ps;
-        ps.push_back(cv::Point2f(cx,cy));
-        ps.push_back(cv::Point2f(-cx,cy));
-        ps.push_back(cv::Point2f(-cx,-cy));
-        ps.push_back(cv::Point2f(cx,-cy));
-        //-- projected corners points
-        std::vector<cv::Point2f> qs;
-        qs.push_back(cv::Point2f(Q0.at<float>(0.0,0.0),Q0.at<float>(1.0,0.0)));
-        qs.push_back(cv::Point2f(Q1.at<float>(0.0,0.0),Q1.at<float>(1.0,0.0)));
-        qs.push_back(cv::Point2f(Q2.at<float>(0.0,0.0),Q2.at<float>(1.0,0.0)));
-        qs.push_back(cv::Point2f(Q3.at<float>(0.0,0.0),Q3.at<float>(1.0,0.0)));
-        //-- compute homography
-        cv::Mat H = cv::findHomography( ps , qs );
-        //std::cout<<H<<std::endl;
-        //-- apply homography
+        float pa[3]={-cx,-cy,0};
+        float pb[3]={cx,-cy,0};
+        float pc[3]={-cx,cy,0};
+        float pe[3]={glCamX,glCamY,glCamZ};
+        //-- space points
+        cv::Vec3f Pa(pa);
+        cv::Vec3f Pb(pb);
+        cv::Vec3f Pc(pc);
+        cv::Vec3f Pe(pe);
+        //-- Compute an orthonormal basis for the screen.
+        cv::Vec3f Vr = Pb-Pa;
+        Vr /= cv::norm(Vr);
+        cv::Vec3f Vu = Pc-Pa;
+        Vu /= cv::norm(Vu);
+        cv::Vec3f Vn = Vr.cross(Vu);
+        Vn /= cv::norm(Vn);
+        //-- Compute the screen corner vectors.
+        cv::Vec3f Va = Pa-Pe;
+        cv::Vec3f Vb = Pb-Pe;
+        cv::Vec3f Vc = Pc-Pe;
+        //-- Find the distance from the eye to screen plane.
+        float d = -Va.dot(Vn);
+        //-- Find the extent of the perpendicular projection.
+        float l = Va.dot(Vr) * near / d;
+        float r = Vr.dot(Vb) * near / d;
+        float b = Vu.dot(Va) * near / d;
+        float t = Vu.dot(Vc) * near / d;
+        //-- Load the perpendicular projection.
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        glFrustum(l, r, b, t, near, far);
+        //-- Rotate the projection to be non-perpendicular.
+        float M[16];
+        memset(M, 0, 16 * sizeof (float));
+        M[0] = Vr[0]; M[1] = Vu[0]; M[2] = Vn[0];
+        M[4] = Vr[1]; M[5] = Vu[1]; M[6] = Vn[1];
+        M[8] = Vr[2]; M[9] = Vu[2]; M[10] = Vn[2];
+        M[15] = 1.0f;
+        glMultMatrixf(M);
+        //-- Move the apex of the frustum to the origin.
+        glTranslatef(-pe[0], -pe[1], -pe[2]);
+        //-- Reset modelview matrix
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+    }
+    else
+    {
+        //-- intrinsic camera params
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
         gluPerspective(60, (float)windowWidth/(float)windowHeight, 1, 250);
-        glMultMatrixf((float*)H.data);                  //how to apply?
+        //-- extrinsic camera params
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+        gluLookAt(glCamX, glCamY, glCamZ, 0, 0, 0, 0, 1, 0);
     }
 }
 
@@ -311,8 +320,10 @@ void draw3dScene()
     }
 
     // SCREEN BORDERS
-    glColor3f(1.0f, 0.0f, 0.0f);
-    drawScreenFrame();
+    if(!bProjectionMode){
+        glColor3f(1.0f, 0.0f, 0.0f);
+        drawScreenFrame();
+    }
 
     // LIGHTING
     glEnable(GL_LIGHTING); //Enable lighting
@@ -336,15 +347,18 @@ void draw3dScene()
     glRotatef(angleRotY, 0.0, 1.0, 0.0);
 
     // GEOMETRY
+    //-- TeaPot
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glutSolidTeapot(5.0);
     //-- Cube 1
-    glColor3f(1.0f, 1.0f, 0.0f);
-    drawCube(0.0, 0.0, 0.0, 6.0, 30.0, 0.0, 1.0, 0.0 );
+    //glColor3f(1.0f, 1.0f, 0.0f);
+    //drawCube(0.0, 0.0, 0.0, 6.0, 30.0, 0.0, 1.0, 0.0 );
     //-- Cube 2
     glColor3f(1.0f, 0.0f, 1.0f);
-    drawCube(-20.0, 0.0, -40.0, 4, 70.0, 0.0, 1.0, 0.0 );
+    drawCube(-20.0, 0.0, -40.0, 3.0, 70.0, 0.0, 1.0, 0.0 );
     //-- Cube 3
     glColor3f(0.0f, 1.0f, 1.0f);
-    drawCube(5.0, 0.0, 10.0, 2.0, 10.0, 0.0, 1.0, 0.0 );
+    drawCube(5.0, 5.0, 10.0, 3.0, 10.0, 0.0, 1.0, 0.0 );
 
     glDisable(GL_LIGHTING); //Disable lighting
 
@@ -405,8 +419,8 @@ void displayCam(cv::Mat camImage)
  */
 void drawScreenFrame()
 {
-    float cx = (float)windowWidth/40.0;
-    float cy = (float)windowHeight/40.0;
+    float cx = (float)windowWidth/pixelNbrPerCm;
+    float cy = (float)windowHeight/pixelNbrPerCm;
 
     glBegin(GL_LINE_LOOP);
         glVertex3f(cx, cy, 0);
@@ -554,8 +568,8 @@ void onKeyboard( unsigned char key, int x, int y )
         case 'M': bPolygonMode = !bPolygonMode; break;
 
         // change homography correction
-        case 'h': bHomographyCorrection = !bHomographyCorrection; break;
-        case 'H': bHomographyCorrection = !bHomographyCorrection; break;
+        case 'p': bProjectionMode = !bProjectionMode; break;
+        case 'P': bProjectionMode = !bProjectionMode; break;
 
         // quit app
         case 'q': exit(0); break;
