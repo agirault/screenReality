@@ -19,7 +19,7 @@ const float near = 0.5;
 
 /** Global variables */
 //-- capture opencv
-cv::String face_cascade_name = "../../haarcascade_frontalface_alt.xml";
+const cv::String face_cascade_name = "/usr/local/share/OpenCV/haarcascades/haarcascade_frontalface_alt.xml";
 cv::CascadeClassifier face_cascade;
 cv::VideoCapture *capture = NULL;
 cv::Mat frame;
@@ -72,7 +72,11 @@ int main( int argc, char **argv )
     // OPENCV INIT
     //-- Load the cascades
     if( !face_cascade.load( face_cascade_name ) )
-    { printf("-- (!) ERROR loading 'haarcascade_frontalface_alt.xml'\nPlease edit face_cascade_name in source code.\n"); return -1; };
+    {
+        fprintf(stderr,"-- (!) ERROR loading 'haarcascade_frontalface_alt.xml'\n");
+        fprintf(stderr,"Please edit 'face_cascade_name' path in main.cpp:22 and recompile the project.\n");
+        return -1;
+    };
 
     // VIDEO CAPTURE
     //-- start video capture from camera
