@@ -21,8 +21,9 @@ make
 ```
 ### Shortcuts
 * **Q** : *exit application*
-* **M** : *changes OpenGL PolygonMode between LINE and FILL*
 * **F** : *fullscreen ON/OFF*
 * **C** : *camera display ON/OFF*
 * **D** : *detection information ON/OFF*
 * **+/-** : *Adapts camera display size*
+* **M** : *changes OpenGL PolygonMode between LINE and FILL*
+* **P** : *changes OpenGL ProjectionMode between Off-Axis and Regular*
