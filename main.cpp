@@ -22,22 +22,20 @@ cv::VideoCapture *capture = NULL;
 cv::Mat frame;
 
 //-- display
-bool bFullScreen = true;
-bool bDisplayCam = true;
-bool bDisplayDetection = true;
-bool bPolygonMode = false;
-bool bHomographyCorrection = false; //does not work yet
-float camRatio = 0.3;
+bool bFullScreen = true;            //- press 'f' to change
+bool bDisplayCam = true;            //- press 'c' to change
+bool bDisplayDetection = true;      //- press 'd' to change
+bool bPolygonMode = false;          //- press 'm' to change
+bool bHomographyCorrection = false; //- press 'h' to change (does not work yet)
+float camRatio = 0.3;               //- press '+/-' to change
+float angleRotY = 0.0;              //- press 'LEFT/RIGHT' to change
+float angleRotX = 0.0;              //- press 'UP/DOWN' to change
 
 //-- dimensions
 int windowWidth;
 int windowHeight;
 int camWidth;
 int camHeight;
-
-//-- scene
-float angleRotY = 0.0;
-float angleRotX = 0.0;
 
 //-- opengl camera
 GLdouble glCamX;
