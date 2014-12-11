@@ -1,14 +1,13 @@
 #include <opencv2/objdetect/objdetect.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
 
 #include <GL/gl.h>
 #include <GL/freeglut.h>
 
 #include <iostream>
-#include <queue>
 #include <stdio.h>
-#include <math.h>
 
 /** Constants */
 const int minFaceSize = 80; // in pixel. The smaller it is, the further away you can go
@@ -27,6 +26,7 @@ bool bFullScreen = true;
 bool bDisplayCam = true;
 bool bDisplayDetection = true;
 bool bPolygonMode = false;
+bool bHomographyCorrection = false; //does not work yet
 float camRatio = 0.3;
 
 //-- dimensions
@@ -198,7 +198,6 @@ cv::Mat detectEyes(cv::Mat image)
         glCamZ = eyesGap/(normRightEye-normLeftEye);
         glCamX = normCenterX*glCamZ;
         glCamY = -normCenterY*glCamZ;
-        //std::cout<<"(x,y,z) = ("<<(int)glCamX<<","<<(int)glCamY<<","<<(int)glCamZ<<")"<<std::endl;
 
         // DISPLAY
         if(bDisplayCam && bDisplayDetection)
@@ -241,6 +240,62 @@ void setGlCamera()
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     gluLookAt(glCamX, glCamY, glCamZ, 0, 0, 0, 0, 1, 0);
+
+    // HOMOGRAPHY CORRECTION
+    if(bHomographyCorrection)
+    {
+        //-- matrix
+        float modelview[16];
+        float projection[16];
+        glGetFloatv (GL_MODELVIEW_MATRIX, modelview);
+        glGetFloatv (GL_PROJECTION_MATRIX, projection);
+        cv::Mat modelM(4,4,CV_32F,modelview);
+        cv::Mat projM(4,4,CV_32F,projection);
+        cv::Mat M = projM*modelM;                           //in that order?
+        //-- opengl camera center
+        float cx = (float)windowWidth/40.0;
+        float cy = (float)windowHeight/40.0;
+        //-- space corners coordinates
+        float p0[4]={cx,cy,0,1};
+        float p1[4]={-cx,cy,0,1};
+        float p2[4]={-cx,-cy,0,1};
+        float p3[4]={cx,-cy,0,1};
+        //-- space corners matrix
+        cv::Mat P0(4,1,CV_32F,p0);
+        cv::Mat P1(4,1,CV_32F,p1);
+        cv::Mat P2(4,1,CV_32F,p2);
+        cv::Mat P3(4,1,CV_32F,p3);
+        //-- projected corners matrix
+        cv::Mat Q0 = M*P0;
+        cv::Mat Q1 = M*P1;
+        cv::Mat Q2 = M*P2;
+        cv::Mat Q3 = M*P3;
+        //-- projected corners divided by z
+        Q0 /= Q0.at<float>(2.0,0.0);
+        Q1 /= Q1.at<float>(2.0,0.0);
+        Q2 /= Q2.at<float>(2.0,0.0);
+        Q3 /= Q3.at<float>(2.0,0.0);
+        //-- space corners points
+        cv::vector<cv::Point2f> ps;
+        ps.push_back(cv::Point2f(cx,cy));
+        ps.push_back(cv::Point2f(-cx,cy));
+        ps.push_back(cv::Point2f(-cx,-cy));
+        ps.push_back(cv::Point2f(cx,-cy));
+        //-- projected corners points
+        std::vector<cv::Point2f> qs;
+        qs.push_back(cv::Point2f(Q0.at<float>(0.0,0.0),Q0.at<float>(1.0,0.0)));
+        qs.push_back(cv::Point2f(Q1.at<float>(0.0,0.0),Q1.at<float>(1.0,0.0)));
+        qs.push_back(cv::Point2f(Q2.at<float>(0.0,0.0),Q2.at<float>(1.0,0.0)));
+        qs.push_back(cv::Point2f(Q3.at<float>(0.0,0.0),Q3.at<float>(1.0,0.0)));
+        //-- compute homography
+        cv::Mat H = cv::findHomography( ps , qs );
+        //std::cout<<H<<std::endl;
+        //-- apply homography
+        glMatrixMode(GL_PROJECTION);
+        glLoadIdentity();
+        gluPerspective(60, (float)windowWidth/(float)windowHeight, 1, 250);
+        glMultMatrixf((float*)H.data);                  //how to apply?
+    }
 }
 
 /**
@@ -273,8 +328,7 @@ void draw3dScene()
     glLightfv(GL_LIGHT0, GL_POSITION, lightPos0);
     //-- Add directed light
     GLfloat lightColor1[] = {0.5f, 0.2f, 0.2f, 1.0f}; //Color (0.5, 0.2, 0.2)
-    //Coming from the direction (-1, 0.5, 0.5)
-    GLfloat lightPos1[] = {-1.0f, 0.5f, 0.5f, 0.0f};
+    GLfloat lightPos1[] = {-1.0f, 0.5f, 0.5f, 0.0f}; //Positioned at (-1, 0.5, 0.5)
     glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor1);
     glLightfv(GL_LIGHT1, GL_POSITION, lightPos1);
 
@@ -500,6 +554,10 @@ void onKeyboard( unsigned char key, int x, int y )
         // change axes display
         case 'm': bPolygonMode = !bPolygonMode; break;
         case 'M': bPolygonMode = !bPolygonMode; break;
+
+        // change homography correction
+        case 'h': bHomographyCorrection = !bHomographyCorrection; break;
+        case 'H': bHomographyCorrection = !bHomographyCorrection; break;
 
         // quit app
         case 'q': exit(0); break;
