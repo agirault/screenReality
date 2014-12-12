@@ -27,3 +27,4 @@ make
 * **+/-** : *Adapts camera display size*
 * **M** : *changes OpenGL PolygonMode between LINE and FILL*
 * **P** : *changes OpenGL ProjectionMode between Off-Axis and Regular*
+* **B** : *bouding box display ON/OFF*

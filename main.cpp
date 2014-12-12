@@ -10,12 +10,12 @@
 #include <stdio.h>
 
 /** Constants */
-const int minFaceSize = 80; // in pixel. The smaller it is, the further away you can go
+const int minFaceSize = 150; // in pixel. The smaller it is, the further away you can go
 const float f = 500; //804.71
 const float eyesGap = 6.5; //cm
-const float pixelNbrPerCm = 40.0;
-const float far = 200;
-const float near = 0.5;
+const float pixelNbrPerCm = 50.0;
+const float far = 60.0;
+const float near = 1.0;
 
 /** Global variables */
 //-- capture opencv
@@ -28,15 +28,16 @@ cv::Mat frame;
 bool bFullScreen = true;            //- press 'f' to change
 bool bDisplayCam = true;            //- press 'c' to change
 bool bDisplayDetection = true;      //- press 'd' to change
+bool bDisplayBox = true;            //- press 'b' to change
 bool bPolygonMode = false;          //- press 'm' to change
 bool bProjectionMode = true;        //- press 'p' to change
 float camRatio = 0.3;               //- press '+/-' to change
-float angleRotY = 0.0;              //- press 'LEFT/RIGHT' to change
-float angleRotX = 0.0;              //- press 'UP/DOWN' to change
 
 //-- dimensions
 int windowWidth;
 int windowHeight;
+float cx;
+float cy;
 int camWidth;
 int camHeight;
 
@@ -47,20 +48,21 @@ GLdouble glCamZ;
 
 /** Functions */
 void redisplay();
+
 cv::Mat detectEyes(cv::Mat image);
+void displayCam(cv::Mat camImage);
 
 void setGlCamera();
 void draw3dScene();
-void displayCam(cv::Mat camImage);
-
-void drawScreenFrame();
-void drawCube(float x, float y, float z, float l, float angle, float ax, float ay, float az );
+void drawFrame(float z);
+void drawLineToInf(float x, float y, float z);
 void drawAxes(float length);
+
+float pixelToCm(int size);
 
 void onReshape( int w, int h );
 void onMouse( int button, int state, int x, int y );
 void onKeyboard( unsigned char key, int x, int y );
-void onSpecialKey(int key, int x, int y);
 void onIdle();
 
 
@@ -98,6 +100,8 @@ int main( int argc, char **argv )
     if(!bFullScreen){
         windowWidth = camWidth*1.5;
         windowHeight = camHeight*1.5;
+        cx = pixelToCm(windowWidth);
+        cy = pixelToCm(windowHeight);
         glutInitWindowPosition( 200, 80 );
         glutInitWindowSize( windowWidth, windowHeight );
     }
@@ -116,6 +120,8 @@ int main( int argc, char **argv )
         glutFullScreen();
         windowWidth = glutGet(GLUT_SCREEN_WIDTH);
         windowHeight = glutGet(GLUT_SCREEN_HEIGHT);
+        cx = pixelToCm(windowWidth);
+        cy = pixelToCm(windowHeight);
         glViewport( 0, 0, windowWidth, windowHeight );
     }
 
@@ -124,7 +130,6 @@ int main( int argc, char **argv )
     glutReshapeFunc( onReshape );
     glutMouseFunc( onMouse );
     glutKeyboardFunc( onKeyboard );
-    glutSpecialFunc( onSpecialKey );
     glutIdleFunc( onIdle );
 
     // GUI LOOP
@@ -247,9 +252,6 @@ void setGlCamera()
         ** Date:   August 2008, revised June 2009
         */
 
-        float cx = (float)windowWidth/pixelNbrPerCm;
-        float cy = (float)windowHeight/pixelNbrPerCm;
-
         //-- space corners coordinates
         float pa[3]={-cx,-cy,0};
         float pb[3]={cx,-cy,0};
@@ -281,7 +283,7 @@ void setGlCamera()
         //-- Load the perpendicular projection.
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-        glFrustum(l, r, b, t, near, far);
+        glFrustum(l, r, b, t, near, far+d);
         //-- Rotate the projection to be non-perpendicular.
         float M[16];
         memset(M, 0, 16 * sizeof (float));
@@ -323,14 +325,23 @@ void draw3dScene()
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
 
-    // SCREEN BORDERS
-    if(!bProjectionMode){
-        glColor3f(1.0f, 0.0f, 0.0f);
-        drawScreenFrame();
+    // BOUNDING BOX
+    if(bDisplayBox){
+        for(int i = 0; i <= 10; i++){
+            float j = (float)i/10.0;
+            //-- lines
+            drawLineToInf((2*j*cx)-cx, cy, 0.0);//top lines
+            drawLineToInf(cx, cy-(2*j*cy), 0.0);//right lines
+            drawLineToInf(cx-(2*j*cx), -cy, 0.0);//bottom lines
+            drawLineToInf(-cx, (2*j*cy)-cy, 0.0);//left lines
+            //-- frames
+            glColor3f(1.0-j,1.0-j,1.0-j);
+            if((i%2) == 0) drawFrame(-j*far);
+        }
     }
 
     // LIGHTING
-    glEnable(GL_LIGHTING); //Enable lighting
+    glEnable(GL_LIGHTING);
     //-- Add ambient light
     GLfloat ambientColor[] = {0.2f, 0.2f, 0.2f, 1.0f}; //Color (0.2, 0.2, 0.2)
     glLightModelfv(GL_LIGHT_MODEL_AMBIENT, ambientColor);
@@ -345,24 +356,31 @@ void draw3dScene()
     glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor1);
     glLightfv(GL_LIGHT1, GL_POSITION, lightPos1);
 
-    // MOVE SCENE
-    //glTranslatef(x, y, z);
-    glRotatef(angleRotX, 1.0, 0.0, 0.0);
-    glRotatef(angleRotY, 0.0, 1.0, 0.0);
-
     // GEOMETRY
     //-- TeaPot
     glColor3f(1.0f, 1.0f, 1.0f);
-    glutSolidTeapot(5.0);
+    glTranslatef(-1, -3, 0);
+        glutSolidTeapot(3);
+    glTranslatef(1, 3,0);
+    drawLineToInf(-1,-3,0);
     //-- Cube 1
-    //glColor3f(1.0f, 1.0f, 0.0f);
-    //drawCube(0.0, 0.0, 0.0, 6.0, 30.0, 0.0, 1.0, 0.0 );
+    glColor3f(1.0f, 1.0f, 0.0f);
+    glTranslatef(-10, -5, 30);
+        glutSolidCube(3);
+    glTranslatef(10, 5, -30);
+    drawLineToInf(-10, -5, 30);
     //-- Cube 2
     glColor3f(1.0f, 0.0f, 1.0f);
-    drawCube(-20.0, 0.0, -40.0, 3.0, 70.0, 0.0, 1.0, 0.0 );
+    glTranslatef(-20, 0, -40);
+        glutSolidCube(3);
+    glTranslatef(20, 0, 40);
+    drawLineToInf(-20, 0, -40);
     //-- Cube 3
     glColor3f(0.0f, 1.0f, 1.0f);
-    drawCube(5.0, 5.0, 10.0, 3.0, 10.0, 0.0, 1.0, 0.0 );
+    glTranslatef(5, 5, 10);
+        glutSolidCube(3);
+    glTranslatef(-5, -5, -10);
+    drawLineToInf(5, 5, 10);
 
     glDisable(GL_LIGHTING); //Disable lighting
 
@@ -417,79 +435,31 @@ void displayCam(cv::Mat camImage)
 }
 
 /**
- * @function drawScreenFrame
+ * @function drawFrame
  * Draws lines between the corners of what we consider to be the screen
- * (We are now attempting to project that image on the screen with an homography)
  */
-void drawScreenFrame()
+void drawFrame(float z)
 {
-    float cx = (float)windowWidth/pixelNbrPerCm;
-    float cy = (float)windowHeight/pixelNbrPerCm;
-
     glBegin(GL_LINE_LOOP);
-        glVertex3f(cx, cy, 0);
-        glVertex3f(cx, -cy, 0);
-        glVertex3f(-cx, -cy, 0);
-        glVertex3f(-cx, cy, 0);
+        glVertex3f(cx, cy, z);
+        glVertex3f(cx, -cy, z);
+        glVertex3f(-cx, -cy, z);
+        glVertex3f(-cx, cy, z);
     glEnd();
 }
 
 /**
- * @function drawCube
- * Draws a cube object
+ * @function drawLineToInf
+ * Draws line from the (x,y,z) coordinate given to (x,y,far)
  */
-void drawCube(float x, float y, float z, float l, float angle, float ax, float ay, float az )
+void drawLineToInf(float x, float y, float z)
 {
-    glTranslatef(x, y, z);
-    glRotatef(angle, ax, ay, az);
-
-    glBegin(GL_QUADS);
-
-        //Front
-        glNormal3f(0.0, 0.0, 1.0);
-        glVertex3f(-l, -l, l);
-        glVertex3f(l, -l, l);
-        glVertex3f(l, l, l);
-        glVertex3f(-l, l, l);
-
-        //Right
-        glNormal3f(1.0, 0.0, 0.0);
-        glVertex3f(l, -l, -l);
-        glVertex3f(l, l, -l);
-        glVertex3f(l, l, l);
-        glVertex3f(l, -l, l);
-
-        //Back
-        glNormal3f(0.0, 0.0, -1.0);
-        glVertex3f(-l, -l, -l);
-        glVertex3f(-l, l, -l);
-        glVertex3f(l, l, -l);
-        glVertex3f(l, -l, -l);
-
-        //Left
-        glNormal3f(-1.0, 0.0, 0.0);
-        glVertex3f(-l, -l, -l);
-        glVertex3f(-l, -l, l);
-        glVertex3f(-l, l, l);
-        glVertex3f(-l, l, -l);
-
-        //Top
-        glNormal3f(0.0, 1.0, 0.0);
-        glVertex3f(-l, l, -l);
-        glVertex3f(-l, l, l);
-        glVertex3f(l, l, l);
-        glVertex3f(l, l, -l);
-
-        //Bottom
-        glNormal3f(0.0, -1.0, 0.0);
-        glVertex3f(-l, -l, -l);
-        glVertex3f(-l, -l, l);
-        glVertex3f(l, -l, l);
-        glVertex3f(l, -l, -l);
-
+    glBegin(GL_LINES);
+        glColor3f(1.0f, 1.0f, 1.0f);
+        glVertex3f(x, y, z);
+        glColor3f(0.0f, 0.0f, 0.0f);
+        glVertex3f(x, y, -far);
     glEnd();
-    glRotatef(-angle, ax, ay, az);
-    glTranslatef(-x, -y, -z);
 }
 
 /**
@@ -498,7 +468,6 @@ void drawCube(float x, float y, float z, float l, float angle, float ax, float a
  */
 void drawAxes(float length)
 {
-
   glBegin(GL_LINES) ;
       glColor3f(1,0,0) ;
       glVertex3f(0,0,0) ;
@@ -512,7 +481,11 @@ void drawAxes(float length)
       glVertex3f(0,0,0) ;
       glVertex3f(0,0,length);
   glEnd() ;
+}
 
+float pixelToCm(int size)
+{
+    return (float)size/pixelNbrPerCm;
 }
 
 /**
@@ -523,6 +496,8 @@ void onReshape( int w, int h )
 {
     windowWidth = w;
     windowHeight = h;
+    cx = pixelToCm(windowWidth);
+    cy = pixelToCm(windowHeight);
     glViewport( 0, 0, windowWidth, windowHeight );
 }
 
@@ -567,11 +542,15 @@ void onKeyboard( unsigned char key, int x, int y )
         case '+': if(camRatio < 1.8) camRatio += 0.1 ; break;
         case '-': if(camRatio > 0.2) camRatio -= 0.1; break;
 
+        // change homography correction
+        case 'b': bDisplayBox = !bDisplayBox; break;
+        case 'B': bDisplayBox = !bDisplayBox; break;
+
         // change axes display
         case 'm': bPolygonMode = !bPolygonMode; break;
         case 'M': bPolygonMode = !bPolygonMode; break;
 
-        // change homography correction
+        // change projection mode
         case 'p': bProjectionMode = !bProjectionMode; break;
         case 'P': bProjectionMode = !bProjectionMode; break;
 
@@ -583,24 +562,6 @@ void onKeyboard( unsigned char key, int x, int y )
     }
 }
 
-void onSpecialKey( int key, int x, int y)
-{
-    switch (key)
-    {
-    case GLUT_KEY_LEFT:
-        angleRotY -= 1.0;
-        break;
-    case GLUT_KEY_RIGHT:
-        angleRotY += 1.0;
-        break;
-    case GLUT_KEY_DOWN:
-        angleRotX += 1.0;
-        break;
-    case GLUT_KEY_UP:
-        angleRotX -= 1.0;
-        break;
-    }
-}
 /**
  * @function onIdle
  * (Called at each openGL step)
