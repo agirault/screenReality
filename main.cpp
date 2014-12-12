@@ -27,6 +27,7 @@ cv::Mat frame;
 //-- display
 bool bPause = false;                //- press ' ' to change
 bool bFullScreen = true;            //- press 'f' to change
+bool bInvertCam = false;            //- press 'i' to change
 bool bDisplayCam = true;            //- press 'c' to change
 bool bDisplayDetection = true;      //- press 'd' to change
 bool bDisplayBox = true;            //- press 'b' to change
@@ -154,7 +155,8 @@ void redisplay()
     // OPENCV
     //-- flip frame image
     cv::Mat tempimage;
-    cv::flip(frame, tempimage, 0);
+    if(bInvertCam) cv::flip(frame, tempimage, 0);
+    else cv::flip(frame, tempimage, 1);
     //-- detect eyes
     tempimage = detectEyes(tempimage);
 
@@ -536,6 +538,10 @@ void onKeyboard( unsigned char key, int x, int y )
     }
     else switch ( key )
     {
+        // invert cam ortientation
+        case 'i': bInvertCam = !bInvertCam; break;
+        case 'I': bInvertCam = !bInvertCam; break;
+
         // change cam display
         case 'c': bDisplayCam = !bDisplayCam; break;
         case 'C': bDisplayCam = !bDisplayCam; break;

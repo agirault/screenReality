@@ -22,6 +22,7 @@ make
 ### Shortcuts
 * **Q** : *exit application*
 * **F** : *fullscreen ON/OFF*
+* **I** : *inverts (flips upside-down) the camera image*
 * **C** : *camera display ON/OFF*
 * **D** : *detection information ON/OFF*
 * **+/-** : *Adapts camera display size*
