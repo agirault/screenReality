@@ -206,9 +206,14 @@ cv::Mat detectEyes(cv::Mat image)
         GLdouble normCenterY = (eyeCenterPt.y - camHeight/2)/f;
 
         //-- get space coordinates
-        glCamZ = eyesGap/(normRightEye-normLeftEye);
-        glCamX = normCenterX*glCamZ;
-        glCamY = -normCenterY*glCamZ;
+        float tempZ = eyesGap/(normRightEye-normLeftEye);
+        float tempX = normCenterX*glCamZ;
+        float tempY = -normCenterY*glCamZ;
+
+        //-- update cam coordinates (smoothing)
+        glCamZ = (glCamZ*0.5) + (tempZ*0.5);
+        glCamX = (glCamX*0.5) + (tempX*0.5);
+        glCamY = (glCamY*0.5) + (tempY*0.5);
 
         // DISPLAY
         if(bDisplayCam && bDisplayDetection)
