@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 /** Constants */
-const int minFaceSize = 150; // in pixel. The smaller it is, the further away you can go
+const int minFaceSize = 80; // in pixel. The smaller it is, the further away you can go
 const float f = 500; //804.71
 const float eyesGap = 6.5; //cm
 const float pixelNbrPerCm = 50.0;
@@ -25,6 +25,7 @@ cv::VideoCapture *capture = NULL;
 cv::Mat frame;
 
 //-- display
+bool bPause = false;                //- press ' ' to change
 bool bFullScreen = true;            //- press 'f' to change
 bool bDisplayCam = true;            //- press 'c' to change
 bool bDisplayDetection = true;      //- press 'd' to change
@@ -147,7 +148,7 @@ int main( int argc, char **argv )
  */
 void redisplay()
 {
-    if(frame.empty()) {return;}
+    if(bPause || frame.empty()) return;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // OPENCV
@@ -554,6 +555,9 @@ void onKeyboard( unsigned char key, int x, int y )
         case 'p': bProjectionMode = !bProjectionMode; break;
         case 'P': bProjectionMode = !bProjectionMode; break;
 
+        // change projection mode
+        case ' ': bPause = !bPause; break;
+
         // quit app
         case 'q': exit(0); break;
         case 'Q': exit(0); break;
@@ -569,6 +573,9 @@ void onKeyboard( unsigned char key, int x, int y )
  */
 void onIdle()
 {
-    (*capture) >> frame;
+    if(!bPause)
+    {
+        (*capture) >> frame;
+    }
 }
 
