@@ -6,7 +6,7 @@ Creates an Augmented Reality through your computer screen, after detecting your 
 
 ### Prerequisites
 * OpenCV : [Installation in Linux](http://docs.opencv.org/doc/tutorials/introduction/linux_install/linux_install.html)
-* OpenGL & GLUT : `sudo apt-get install freeglut3-dev`
+* OpenGL & GLUT : `sudo apt-get install libxi-dev libxmu-dev freeglut3-dev`
 
 ### Build
 In a Linux Terminal: 
@@ -27,4 +27,4 @@ make
 * **+/-** : *Adapts camera display size*
 * **M** : *changes OpenGL PolygonMode between LINE and FILL*
 * **P** : *changes OpenGL ProjectionMode between Off-Axis and Regular*
-* **B** : *bouding box display ON/OFF*
+* **B** : *bounding box display ON/OFF*
