@@ -149,27 +149,30 @@ int main( int argc, char **argv )
  */
 void redisplay()
 {
-    if(bPause || frame.empty()) return;
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    if(frame.empty()) return;
 
-    // OPENCV
-    //-- flip frame image
-    cv::Mat tempimage;
-    if(bInvertCam) cv::flip(frame, tempimage, 0);
-    else cv::flip(frame, tempimage, 1);
-    //-- detect eyes
-    tempimage = detectEyes(tempimage);
+    if(!bPause)
+    {
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // OPENGL
-    //-- scene
-    setGlCamera();
-    draw3dScene();
-    //-- cam
-    if(bDisplayCam) displayCam(tempimage);
+        // OPENCV
+        //-- flip frame image
+        cv::Mat tempimage;
+        if(bInvertCam) cv::flip(frame, tempimage, 0);
+        else cv::flip(frame, tempimage, 1);
+        //-- detect eyes
+        tempimage = detectEyes(tempimage);
 
-    // RENDER
-    //-- display on screen
-    glutSwapBuffers();
+        // OPENGL
+        //-- scene
+        setGlCamera();
+        draw3dScene();
+        //-- cam
+        if(bDisplayCam) displayCam(tempimage);
+
+        // RENDER
+        glutSwapBuffers();
+    }
     //-- post the next redisplay
     glutPostRedisplay();
 }
@@ -367,10 +370,10 @@ void draw3dScene()
     // GEOMETRY
     //-- TeaPot
     glColor3f(1.0f, 1.0f, 1.0f);
-    glTranslatef(-1, -3, 0);
-        glutSolidTeapot(3);
-    glTranslatef(1, 3,0);
-    drawLineToInf(-1,-3,0);
+    glTranslatef(-1, -3, -10);
+        glutSolidTeapot(5);
+    glTranslatef(1, 3, 10);
+    drawLineToInf( -1, -3, -10);
     //-- Cube 1
     glColor3f(1.0f, 1.0f, 0.0f);
     glTranslatef(-10, -5, 30);
